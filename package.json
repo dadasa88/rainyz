@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "@discordjs/opus": "^0.6.0",
+    "@discordjs/voice": "^0.6.0",
+    "discord.js": "^12.5.3",
+    "ffmpeg-static": "^4.4.0",
+    "fs": "^0.0.1-security",
+    "yt-search": "^2.10.1",
+    "ytdl-core": "^4.9.1"
+  },
+  "name": "rainyz",
+  "version": "1.0.0",
+  "description": "Rainyz Music Bot",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dadasa88/rainyz.git"
+  },
+  "author": "Kelvin Lee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dadasa88/rainyz/issues"
+  },
+  "homepage": "https://github.com/dadasa88/rainyz#readme"
+}
