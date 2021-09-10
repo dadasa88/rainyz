@@ -1,24 +1,25 @@
 const ytdl = require('ytdl-core');
 const ytSearch = require('yt-search');
-const { joinVoiceChannel } = require('@discordjs/voice');
+const {MessageEmbed} = require('discord.js')
 
-//Global queue for your bot. Every server will have a key and value pair in this map. { guild.id, queue_constructor{} }
+//current song in the queue
+var currentSong = [];
+
 const queue = new Map();
 
 module.exports = {
     name: 'play',
-    aliases: ['skip', 'stop'], //We are using aliases to run the skip and stop command follow this tutorial if lost: https://www.youtube.com/watch?v=QBUJ3cdofqc
+    aliases: ['skip', 'stop', 'p', 'q'],
     cooldown: 0,
-    description: 'Advanced music bot',
+    description: 'Rainyz music bot',
     async execute(message,args, cmd, client, Discord){
 
-
-        //Checking for the voicechannel and permissions (you can add more permissions if you like).
+        //Checking for the voicechannel and permissions 
         const voice_channel = message.member.voice.channel;
         if (!voice_channel) return message.channel.send('You need to be in a channel to execute this command!');
         const permissions = voice_channel.permissionsFor(message.client.user);
-        if (!permissions.has('CONNECT')) return message.channel.send('You dont have the correct permissins');
-        if (!permissions.has('SPEAK')) return message.channel.send('You dont have the correct permissins');
+        if (!permissions.has('CONNECT')) return message.channel.send('You dont have the correct permissions');
+        if (!permissions.has('SPEAK')) return message.channel.send('You dont have the correct permissions');
 
         //This is our server queue. We are getting this server queue from the global queue.
         const server_queue = queue.get(message.guild.id);
@@ -63,7 +64,6 @@ module.exports = {
     
                 //Establish a connection and play the song with the vide_player function.
                 try {
-                    
                     const connection = await voice_channel.join();
                     queue_constructor.connection = connection;
                     video_player(message.guild, queue_constructor.songs[0]);
@@ -80,10 +80,10 @@ module.exports = {
 
         else if(cmd === 'skip') skip_song(message, server_queue);
         else if(cmd === 'stop') stop_song(message, server_queue);
+        else if(cmd === 'q') queue_song(message, server_queue);
     }
     
 }
-
 const video_player = async (guild, song) => {
     console.log(queue.get(guild.id));
     const song_queue = queue.get(guild.id);
@@ -94,12 +94,13 @@ const video_player = async (guild, song) => {
         queue.delete(guild.id);
         return;
     }
-    const stream = ytdl(song.url, { filter: 'audioonly' });
+    const stream = ytdl(song.url, { filter: 'audioonly', highWaterMark: 1<<25 });
     song_queue.connection.play(stream, { seek: 0, volume: 0.5 })
     .on('finish', () => {
         song_queue.songs.shift();
         video_player(guild, song_queue.songs[0]);
     });
+    currentSong = song_queue.songs[0];
     await song_queue.text_channel.send(`🎶 Now playing **${song.title}**`)
 }
 
@@ -108,11 +109,35 @@ const skip_song = (message, server_queue) => {
     if(!server_queue){
         return message.channel.send(`There are no songs in queue 😔`);
     }
+    currentSong = [];
     server_queue.connection.dispatcher.end();
 }
 
 const stop_song = (message, server_queue) => {
     if (!message.member.voice.channel) return message.channel.send('You need to be in a channel to execute this command!');
     server_queue.songs = [];
+    currentSong = [];
     server_queue.connection.dispatcher.end();
+}
+
+const queue_song = (message, server_queue) => {
+    if (!message.member.voice.channel) return message.channel.send('You need to be in a channel to execute this command!');
+    if(!server_queue){
+        return message.channel.send(`There are no songs in queue 😔`);
+    }
+
+    console.log(server_queue.songs.length);
+    const songs = server_queue.songs.slice(0, 10).map((m, i) => {
+        return `${i + 1}. **${m.title}** ([link](${m.url}))`;
+    });
+
+    const embed = new MessageEmbed()
+    .setTitle('Server Queue')
+    .setDescription(`${songs.join("\n")}${
+        server_queue.songs.length > songs.length
+            ? `\n...${server_queue.songs.length - songs.length === 1 ? `${server_queue.songs.length - songs.length} more songs` : `${server_queue.songs.length - songs.length} more songs`}` : ""
+    }`)
+    .setColor('0xff0000')
+    .addFields({name: "Now Playing", value: `🎶 | **${currentSong.title}**([link](${currentSong.url}))`})
+    return message.channel.send(embed);
 }
